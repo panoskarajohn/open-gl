@@ -16,11 +16,11 @@ void main()
 
 const char *fragmentShaderSource = R"glsl(
 #version 330 core
-in vec4 vertexColor;
+uniform vec4 ourColor;
 out vec4 FragColor;
 void main()
 {
-    FragColor = vertexColor;
+    FragColor = ourColor;
 }
 )glsl";
 
@@ -118,7 +118,13 @@ void render_loop(GLFWwindow *window) {
         glClear(GL_COLOR_BUFFER_BIT);
 
         // draw
+        float timeValue = glfwGetTime();
+        float greenValue = (sin(timeValue) / 2.0f) + 0.5f;
+        std::cout << "\rGreen value: " << greenValue << std::flush;
+        int vertexColorLocation = glGetUniformLocation(shader, "ourColor");
         glUseProgram(shader);
+        glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
+
         glBindVertexArray(triangle.VAO);
         glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
 
