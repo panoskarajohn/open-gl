@@ -6,21 +6,25 @@
 const char *vertexShaderSource = R"glsl(
 #version 330 core
 layout (location = 0) in vec3 aPos;
-out vec4 vertexColor;
+layout (location = 1) in vec3 aColor;
+
+out vec3 vertexColor;
+
 void main()
 {
     gl_Position = vec4(aPos, 1.0);
-    vertexColor = vec4(0.5, 0.0, 0.0, 1.0);
+    vertexColor = aColor;
 }
 )glsl";
 
 const char *fragmentShaderSource = R"glsl(
 #version 330 core
-uniform vec4 ourColor;
+
 out vec4 FragColor;
+in vec3 vertexColor;
 void main()
 {
-    FragColor = ourColor;
+    FragColor = vec4(vertexColor, 1.0);
 }
 )glsl";
 
@@ -42,7 +46,7 @@ unsigned int buildAndCompileShader(const char *vertexShaderSource, const char *f
     glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
     if (success == GL_FALSE) {
         glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
-        std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
+        std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
     }
 
     unsigned int shaderProgram = glCreateProgram();
@@ -89,6 +93,31 @@ TriangleBuffers createTriangle(const std::span<const float> &vertices, const std
     return buffers;
 }
 
+TriangleBuffers createTriangleWithColor(const std::span<const float> &vertices) {
+
+    unsigned int VBO, VAO, EBO;
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    glBindVertexArray(VAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
+
+    // position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    // color attribute
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3* sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+    TriangleBuffers buffers{};
+    buffers.VAO = VAO;
+    buffers.VBO = VBO;
+    buffers.EBO = EBO;
+    return buffers;
+}
+
 void processInput(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, GLFW_TRUE);
@@ -97,18 +126,16 @@ void processInput(GLFWwindow *window) {
 
 void render_loop(GLFWwindow *window) {
     float vertices[] = {
-        // x,    y,    z
-        0.0f,  0.5f, 0.0f,  // Top
-       -0.5f, -0.5f, 0.0f,  // Bottom left
-        0.5f, -0.5f, 0.0f   // Bottom right
+        // positions         // colors
+        0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,   // bottom right
+       -0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,   // bottom left
+        0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f    // top
    };
 
-    unsigned int indices[] = {
-        0, 1, 2,
-    };
-
-    auto triangle = createTriangle(vertices, indices);
+    auto triangle = createTriangleWithColor(vertices);
     auto shader = buildAndCompileShader(vertexShaderSource, fragmentShaderSource);
+    glUseProgram(shader);
+
 
     while (!glfwWindowShouldClose(window)) {
         processInput(window);
@@ -118,14 +145,8 @@ void render_loop(GLFWwindow *window) {
         glClear(GL_COLOR_BUFFER_BIT);
 
         // draw
-        glUseProgram(shader);
-        float timeValue = glfwGetTime();
-        float greenValue = (sin(timeValue) / 2.0f) + 0.5f;
-        std::cout << "\rGreen value: " << greenValue << std::flush;
-        int vertexColorLocation = glGetUniformLocation(shader, "ourColor");
-        glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
         glBindVertexArray(triangle.VAO);
-        glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -133,7 +154,7 @@ void render_loop(GLFWwindow *window) {
 
     glDeleteVertexArrays(1, &triangle.VAO);
     glDeleteBuffers(1, &triangle.VBO);
-    glDeleteBuffers(1, &triangle.EBO);
+    //glDeleteBuffers(1, &triangle.EBO);
     glDeleteProgram(shader);
 }
 
