@@ -9,7 +9,7 @@ find_package(glfw3 REQUIRED)
 
 # Include GLAD headers
 include_directories(${CMAKE_SOURCE_DIR}/Include)
-include_directories(${CMAKE_SOURCE_DIR}/UtilitiesB)
+include_directories(${CMAKE_SOURCE_DIR}/Utilities)
 
 # Add executable with sources, including glad.c as a source
 add_executable(shaders
@@ -17,6 +17,7 @@ add_executable(shaders
         Libs/glad/glad.c
         Utilities/Shader.cpp
         Utilities/Shader.h
+        Libs/image/stb_image.cpp
 )
 
 # Link libraries
