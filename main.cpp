@@ -5,7 +5,7 @@
 
 #include "Libs/image/stb_image.h"
 #include "Utilities/Shader.h"
-
+float mixValue = 0.2f;
 
 struct TriangleBuffers {
     unsigned int VAO;
@@ -13,30 +13,6 @@ struct TriangleBuffers {
     unsigned int EBO;
 };
 
-TriangleBuffers createTriangleWithColor(const std::span<const float> &vertices) {
-
-    unsigned int VBO, VAO, EBO;
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glBindVertexArray(VAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
-
-    // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-
-    // color attribute
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3* sizeof(float)));
-    glEnableVertexAttribArray(1);
-
-    TriangleBuffers buffers{};
-    buffers.VAO = VAO;
-    buffers.VBO = VBO;
-    buffers.EBO = EBO;
-    return buffers;
-}
 
 TriangleBuffers createTriangleWithTexture(const std::span<const float> &vertices, const std::span<const unsigned int> &indices) {
 
@@ -75,6 +51,20 @@ void processInput(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, GLFW_TRUE);
     }
+
+    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+        mixValue += 0.01f;
+        if (mixValue > 1.0f) {
+            mixValue = 1.0f;
+        }
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+        mixValue -= 0.01f;
+        if (mixValue < 0.0f) {
+            mixValue = 0.0f;
+        }
+    }
 }
 
 unsigned int loadTexture(char const *path, bool invert = false) {
@@ -84,8 +74,8 @@ unsigned int loadTexture(char const *path, bool invert = false) {
     // set the texture wrapping/filtering options (on the currently bound texture object)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // horizontal
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT); // vertical
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // we cannot mip map on mag
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_NEAREST); // we cannot mip map on mag
     // load and generate the texture
     int width, height, nrChannels;
     if (invert == false) {
@@ -134,6 +124,8 @@ void render_loop(GLFWwindow *window) {
         //rendering commands here
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
+
+        shader.setFloat("mixtureValue", mixValue);
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture1);
