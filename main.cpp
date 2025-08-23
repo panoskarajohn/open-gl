@@ -115,7 +115,6 @@ void render_loop(GLFWwindow *window) {
             // float angle = 20.0f * i;
             float angle = 20.0f * i + (float) glfwGetTime() * 50.0f; // 50.0f is rotation speed
             model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
-            model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
             shader.setMat4("model", model);
 
             glDrawArrays(GL_TRIANGLES, 0, 36);
