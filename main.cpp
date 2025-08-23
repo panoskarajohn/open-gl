@@ -5,6 +5,11 @@
 
 #include "Libs/image/stb_image.h"
 #include "Utilities/Shader.h"
+
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 float mixValue = 0.2f;
 
 struct TriangleBuffers {
@@ -118,6 +123,8 @@ void render_loop(GLFWwindow *window) {
     unsigned int texture1 = loadTexture("../Images/container.jpg");
     unsigned int texture2 = loadTexture("../Images/img.png");
 
+    unsigned int transformLoc = glGetUniformLocation(shader.ID, "transform");
+
     while (!glfwWindowShouldClose(window)) {
         processInput(window);
 
@@ -131,6 +138,20 @@ void render_loop(GLFWwindow *window) {
         glBindTexture(GL_TEXTURE_2D, texture1);
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, texture2);
+
+        glm::mat4 trans = glm::mat4(1.0f);
+        float time = glfwGetTime();
+        float scale = 1.0f + 0.5 * sinf(time);
+        float time2 = sinf(time);
+
+        std::cout << "\rScale: " << scale << "Time: " << time;
+        std::cout.flush();
+
+        trans = glm::translate(trans, glm::vec3(-0.5f, 0.5f, 0.0f));
+        trans = glm::scale(trans, glm::vec3(scale, scale, 0.0f));
+        trans = glm::rotate(trans, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
+
+        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
 
         // draw
         glBindVertexArray(triangle.VAO);
@@ -190,6 +211,21 @@ void initOpenGl() {
     glfwTerminate();
 }
 
+void printVec4 (const glm::vec4& v) {
+    std::cout << v.x << " " << v.y << " " << v.z << " " << v.w << std::endl;
+}
+
+void printMatrix(const glm::mat4& m) {
+    std::cout << "Print matrix:" << std::endl;
+    for (int row = 0; row < 4; ++row) {
+        std::cout << "[ ";
+        for (int col = 0; col < 4; ++col) {
+            std::cout << m[row][col] << " ";
+        }
+        std::cout << "]" << std::endl;
+    }
+    std::cout << std::endl;
+}
 
 
 // TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
