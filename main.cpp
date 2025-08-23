@@ -10,6 +10,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "Utilities/VertexData.h"
 #include "VertexUtility.h"
 
 float mixValue = 0.2f;
@@ -61,19 +62,7 @@ unsigned int loadTexture(char const *path, bool invert = false) {
 }
 
 void render_loop(GLFWwindow *window) {
-    float vertices[] = {
-        // positions      // colors         // texture coords
-        0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, // top right
-        0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, // bottom right
-        -0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, // bottom left
-        -0.5f, 0.5f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f // top left
-    };
-    unsigned int indices[] = {
-        0, 1, 3, // first triangle
-        1, 2, 3 // second triangle
-    };
-
-    TriangleBuffers triangle = VertexUtility::CreateTriangleWithTexture(vertices, indices);
+    TriangleBuffersWithoutEBO triangle = VertexUtility::CreateTriangleWithTexture(cubeRotation);
     Shader shader("../Shaders/vertexShaderSource.glsl", "../Shaders/fragmentShaderSource.glsl");
     shader.use();
 
@@ -82,10 +71,6 @@ void render_loop(GLFWwindow *window) {
     unsigned int texture1 = loadTexture("../Images/container.jpg");
     unsigned int texture2 = loadTexture("../Images/img.png");
 
-    unsigned int transformLoc = glGetUniformLocation(shader.ID, "transform");
-
-    glm::mat4 model = glm::mat4(1.0f);
-    model = glm::rotate(model, glm::radians(-55.f), glm::vec3(1.0f, 0.0f, 0.0f));
 
     glm::mat4 view = glm::mat4(1.0f);
     view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
@@ -93,8 +78,6 @@ void render_loop(GLFWwindow *window) {
     glm::mat4 projection = glm::mat4(1.0f);
     projection = glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 0.1f, 100.0f);
 
-    int modelLoc = glGetUniformLocation(shader.ID, "model");
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
     int viewLoc = glGetUniformLocation(shader.ID, "view");
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
@@ -110,6 +93,10 @@ void render_loop(GLFWwindow *window) {
         glClear(GL_COLOR_BUFFER_BIT);
 
         shader.setFloat("mixtureValue", mixValue);
+        glm::mat4 model = glm::mat4(1.0f);
+        model = glm::rotate(model, (float) glfwGetTime() * glm::radians(20.0f), glm::vec3(0.5f, 1.0f, 0.0f));
+        int modelLoc = glGetUniformLocation(shader.ID, "model");
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture1);
@@ -118,15 +105,15 @@ void render_loop(GLFWwindow *window) {
 
         // draw
         glBindVertexArray(triangle.VAO);
-        //glDrawArrays(GL_TRIANGLES, 0, 3);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+        //glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
     glDeleteVertexArrays(1, &triangle.VAO);
     glDeleteBuffers(1, &triangle.VBO);
-    glDeleteBuffers(1, &triangle.EBO);
+    //glDeleteBuffers(1, &triangle.EBO);
 }
 
 void framebuffer_size_callback(GLFWwindow *window, int width, int height) {

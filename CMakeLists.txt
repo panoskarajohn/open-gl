@@ -20,6 +20,7 @@ add_executable(shaders
         Libs/image/stb_image.cpp
         Utilities/VertexUtility.cpp
         Utilities/VertexUtility.h
+        Utilities/VertexData.h
 )
 
 # Link libraries
