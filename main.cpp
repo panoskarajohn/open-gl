@@ -10,47 +10,9 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "VertexUtility.h"
+
 float mixValue = 0.2f;
-
-struct TriangleBuffers {
-    unsigned int VAO;
-    unsigned int VBO;
-    unsigned int EBO;
-};
-
-
-TriangleBuffers createTriangleWithTexture(const std::span<const float> &vertices, const std::span<const unsigned int> &indices) {
-
-    unsigned int VBO, VAO, EBO;
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glGenBuffers(1, &EBO);
-    glBindVertexArray(VAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
-
-    // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-
-    // color attribute
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-
-    // texture coord attribute
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-    glEnableVertexAttribArray(2);
-
-    TriangleBuffers buffers{};
-    buffers.VAO = VAO;
-    buffers.VBO = VBO;
-    buffers.EBO = EBO;
-    return buffers;
-}
 
 void processInput(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
@@ -87,14 +49,11 @@ unsigned int loadTexture(char const *path, bool invert = false) {
         stbi_set_flip_vertically_on_load(true);
     }
     unsigned char *data = stbi_load(path, &width, &height, &nrChannels, 0);
-    if (data)
-    {
+    if (data) {
         GLenum format = (nrChannels == 4) ? GL_RGBA : GL_RGB;
         glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
-    }
-    else
-    {
+    } else {
         std::cout << "Failed to load texture" << std::endl;
     }
     stbi_image_free(data);
@@ -103,18 +62,18 @@ unsigned int loadTexture(char const *path, bool invert = false) {
 
 void render_loop(GLFWwindow *window) {
     float vertices[] = {
-        // positions          // colors           // texture coords
-        0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // top right
-        0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
-       -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
-       -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left
-   };
+        // positions      // colors         // texture coords
+        0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, // top right
+        0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, // bottom right
+        -0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, // bottom left
+        -0.5f, 0.5f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f // top left
+    };
     unsigned int indices[] = {
         0, 1, 3, // first triangle
-        1, 2, 3  // second triangle
+        1, 2, 3 // second triangle
     };
 
-    TriangleBuffers triangle = createTriangleWithTexture(vertices, indices);
+    TriangleBuffers triangle = VertexUtility::CreateTriangleWithTexture(vertices, indices);
     Shader shader("../Shaders/vertexShaderSource.glsl", "../Shaders/fragmentShaderSource.glsl");
     shader.use();
 
@@ -124,6 +83,24 @@ void render_loop(GLFWwindow *window) {
     unsigned int texture2 = loadTexture("../Images/img.png");
 
     unsigned int transformLoc = glGetUniformLocation(shader.ID, "transform");
+
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::rotate(model, glm::radians(-55.f), glm::vec3(1.0f, 0.0f, 0.0f));
+
+    glm::mat4 view = glm::mat4(1.0f);
+    view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+
+    glm::mat4 projection = glm::mat4(1.0f);
+    projection = glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 0.1f, 100.0f);
+
+    int modelLoc = glGetUniformLocation(shader.ID, "model");
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+
+    int viewLoc = glGetUniformLocation(shader.ID, "view");
+    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+
+    int projectionLoc = glGetUniformLocation(shader.ID, "projection");
+    glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
     while (!glfwWindowShouldClose(window)) {
         processInput(window);
@@ -138,20 +115,6 @@ void render_loop(GLFWwindow *window) {
         glBindTexture(GL_TEXTURE_2D, texture1);
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, texture2);
-
-        glm::mat4 trans = glm::mat4(1.0f);
-        float time = glfwGetTime();
-        float scale = 1.0f + 0.5 * sinf(time);
-        float time2 = sinf(time);
-
-        std::cout << "\rScale: " << scale << "Time: " << time;
-        std::cout.flush();
-
-        trans = glm::translate(trans, glm::vec3(-0.5f, 0.5f, 0.0f));
-        trans = glm::scale(trans, glm::vec3(scale, scale, 0.0f));
-        trans = glm::rotate(trans, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
-
-        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
 
         // draw
         glBindVertexArray(triangle.VAO);
@@ -211,11 +174,11 @@ void initOpenGl() {
     glfwTerminate();
 }
 
-void printVec4 (const glm::vec4& v) {
+void printVec4(const glm::vec4 &v) {
     std::cout << v.x << " " << v.y << " " << v.z << " " << v.w << std::endl;
 }
 
-void printMatrix(const glm::mat4& m) {
+void printMatrix(const glm::mat4 &m) {
     std::cout << "Print matrix:" << std::endl;
     for (int row = 0; row < 4; ++row) {
         std::cout << "[ ";
