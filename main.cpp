@@ -17,14 +17,7 @@
 float mixValue = 0.2f;
 
 float deltaTime = 0.0f; // time between current frame and last frame
-float lastFrame = 0.0f;
-
-float yaw = -90.0f;
-float pitch = 0.0f;
-
-bool firstMouse = true;
 float lastX = 400, lastY = 300;
-float fov = 45.0f;
 
 Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 
