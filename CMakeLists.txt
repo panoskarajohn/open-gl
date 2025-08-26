@@ -21,6 +21,7 @@ add_executable(shaders
         Utilities/VertexUtility.cpp
         Utilities/VertexUtility.h
         Utilities/VertexData.h
+        Utilities/Camera.h
 )
 
 # Link libraries
