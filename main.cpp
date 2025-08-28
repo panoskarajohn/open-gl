@@ -16,10 +16,12 @@
 
 float mixValue = 0.2f;
 
+float lastFrame = 0.0f;
 float deltaTime = 0.0f; // time between current frame and last frame
 float lastX = 400, lastY = 300;
+glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
 
-Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
+Camera camera(glm::vec3(0.0f, 0.0f, 4.0f));
 
 
 void processInput(GLFWwindow *window) {
@@ -95,85 +97,82 @@ unsigned int loadTexture(char const *path, bool invert = false) {
 }
 
 void render_loop(GLFWwindow *window) {
-    TriangleBuffersWithoutEBO triangle = VertexUtility::CreateTriangleWithTexture(cubeRotation);
-    Shader shader("../Shaders/vertexShaderSource.glsl", "../Shaders/fragmentShaderSource.glsl");
-    shader.use();
-
-    glUniform1i(glGetUniformLocation(shader.ID, "texture1"), 0); // set it manually
-    shader.setInt("texture2", 1); // or with shader class
-    unsigned int texture1 = loadTexture("../Images/container.jpg");
-    unsigned int texture2 = loadTexture("../Images/img.png");
-
-
-    auto view = glm::mat4(1.0f);
-    //view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
-
-    auto projection = glm::mat4(1.0f);
-
-
-    int viewLoc = glGetUniformLocation(shader.ID, "view");
-    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-
-    int projectionLoc = glGetUniformLocation(shader.ID, "projection");
-    glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
-    glEnable(GL_DEPTH_TEST);
-
-    glm::vec3 cubePositions[] = {
-        glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(2.0f, 5.0f, -15.0f), glm::vec3(-1.5f, -2.2f, -2.5f),
-        glm::vec3(-3.8f, -2.0f, -12.3f), glm::vec3(2.4f, -0.4f, -3.5f), glm::vec3(-1.7f, 3.0f, -7.5f),
-        glm::vec3(1.3f, -2.0f, -2.5f), glm::vec3(1.5f, 2.0f, -2.5f), glm::vec3(1.5f, 0.2f, -1.5f),
-        glm::vec3(-1.3f, 1.0f, -1.5f)
-    };
+    Shader lightingShader("../Shaders/color_1.glsl", "../Shaders/color_1_frag.glsl");
+    Shader lightCubeShader("../Shaders/color_1.glsl", "../Shaders/color_1_frag_light.glsl");
 
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetCursorPosCallback(window, mouse_callback);
     glfwSetScrollCallback(window, scroll_callback);
 
+    unsigned int VBO, cubeVAO;
+    glGenVertexArrays(1, &cubeVAO);
+    glGenBuffers(1, &VBO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(cube), cube, GL_STATIC_DRAW);
+
+    glBindVertexArray(cubeVAO);
+
+    // position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *) 0);
+    glEnableVertexAttribArray(0);
+
+    // second, configure the light's VAO (VBO stays the same; the vertices are the same for the light object which is also a 3D cube)
+    unsigned int lightCubeVAO;
+    glGenVertexArrays(1, &lightCubeVAO);
+    glBindVertexArray(lightCubeVAO);
+
+    // we only need to bind to the VBO (to link it with glVertexAttribPointer), no need to fill it; the VBO's data already contains all we need (it's already bound, but we do it again for educational purposes)
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *) 0);
+    glEnableVertexAttribArray(0);
+
     while (!glfwWindowShouldClose(window)) {
+        float currentFrame = glfwGetTime();
+        deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
+
         processInput(window);
 
         //rendering commands here
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        shader.setFloat("mixtureValue", mixValue);
+        lightingShader.use();
+        lightingShader.setVec3("objectColor", glm::vec3(1.0f, 0.5f, 0.31f));
+        lightingShader.setVec3("lightColor", glm::vec3(1.0f, 1.0f, 1.0f));
 
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture1);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, texture2);
-
-        // draw
-        glBindVertexArray(triangle.VAO);
-        for (unsigned int i = 0; i < 10; i++) {
-            auto model = glm::mat4(1.0f);
-            model = glm::translate(model, cubePositions[i]);
-            // float angle = 20.0f * i;
-            float angle = i * 20.0f + static_cast<float>(glfwGetTime()) * 50.0f; // 50.0f is rotation speed
-            //model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
-            shader.setMat4("model", model);
-
-            glDrawArrays(GL_TRIANGLES, 0, 36);
-        }
-
+        //view/projection transformations
+        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), 800.0f / 600.0f, 0.1f, 100.0f);
         glm::mat4 view = camera.GetViewMatrix();
-        shader.setMat4("view", view);
-        projection = glm::perspective(glm::radians(camera.Zoom), 800.0f / 600.0f, 0.1f, 100.0f);
-        shader.setMat4("projection", projection);
+        lightingShader.setMat4("projection", projection);
+        lightingShader.setMat4("view", view);
+
+        glm::mat4 model = glm::mat4(1.0f);
+        lightingShader.setMat4("model", model);
+
+        glBindVertexArray(cubeVAO);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+
+        lightCubeShader.use();
+        lightCubeShader.setMat4("projection", projection);
+        lightCubeShader.setMat4("view", view);
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, lightPos);
+        model = glm::scale(model, glm::vec3(0.2f));
+        lightCubeShader.setMat4("model", model);
+        glBindVertexArray(lightCubeVAO);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
 
 
-        // float radius = 10.0f;
-        // auto camX = static_cast<float>(sin(glfwGetTime()) * radius);
-        // auto camZ = static_cast<float>(cos(glfwGetTime()) * radius);
-        //view = glm::lookAt(glm::vec3(camX, 0.0f, camZ), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-        // shader.setMat4("view", view);
-        //glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
-    glDeleteVertexArrays(1, &triangle.VAO);
-    glDeleteBuffers(1, &triangle.VBO);
+    glDeleteVertexArrays(1, &cubeVAO);
+    glDeleteVertexArrays(1, &lightCubeVAO);
+    glDeleteBuffers(1, &VBO);
     //glDeleteBuffers(1, &triangle.EBO);
 }
 
@@ -217,6 +216,7 @@ void initOpenGl() {
 
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     std::cout << "OpenGL version: " << glGetString(GL_VERSION) << "\n";
+    glEnable(GL_DEPTH_TEST);
     render_loop(window);
     glfwDestroyWindow(window);
     glfwTerminate();
