@@ -21,7 +21,7 @@ float deltaTime = 0.0f; // time between current frame and last frame
 float lastX = 400, lastY = 300;
 glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
 
-Camera camera(glm::vec3(0.0f, 0.0f, 4.0f));
+Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 
 
 void processInput(GLFWwindow *window) {
@@ -97,8 +97,8 @@ unsigned int loadTexture(char const *path, bool invert = false) {
 }
 
 void render_loop(GLFWwindow *window) {
-    Shader lightingShader("../Shaders/color_1.glsl", "../Shaders/color_1_frag.glsl");
-    Shader lightCubeShader("../Shaders/color_1.glsl", "../Shaders/color_1_frag_light.glsl");
+    Shader lightingShader("../Shaders/color_1_vec.glsl", "../Shaders/color_1_frag.glsl");
+    Shader lightCubeShader("../Shaders/color_1_vec.glsl", "../Shaders/color_1_frag_light.glsl");
 
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetCursorPosCallback(window, mouse_callback);
@@ -109,12 +109,12 @@ void render_loop(GLFWwindow *window) {
     glGenBuffers(1, &VBO);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(cube), cube, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(cube_light), cube_light, GL_STATIC_DRAW);
 
     glBindVertexArray(cubeVAO);
 
     // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *) 0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *) 0);
     glEnableVertexAttribArray(0);
 
     // second, configure the light's VAO (VBO stays the same; the vertices are the same for the light object which is also a 3D cube)
@@ -125,7 +125,7 @@ void render_loop(GLFWwindow *window) {
     // we only need to bind to the VBO (to link it with glVertexAttribPointer), no need to fill it; the VBO's data already contains all we need (it's already bound, but we do it again for educational purposes)
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *) 0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *) 0);
     glEnableVertexAttribArray(0);
 
     while (!glfwWindowShouldClose(window)) {
@@ -142,6 +142,7 @@ void render_loop(GLFWwindow *window) {
         lightingShader.use();
         lightingShader.setVec3("objectColor", glm::vec3(1.0f, 0.5f, 0.31f));
         lightingShader.setVec3("lightColor", glm::vec3(1.0f, 1.0f, 1.0f));
+        lightingShader.setVec3("lightPos", glm::vec3(1.2f, 1.0f, 2.0f));
 
         //view/projection transformations
         glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), 800.0f / 600.0f, 0.1f, 100.0f);
@@ -154,6 +155,9 @@ void render_loop(GLFWwindow *window) {
 
         glBindVertexArray(cubeVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
+
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *) (3 * sizeof(float)));
+        glEnableVertexAttribArray(1);
 
         lightCubeShader.use();
         lightCubeShader.setMat4("projection", projection);
