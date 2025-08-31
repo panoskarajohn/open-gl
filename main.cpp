@@ -143,6 +143,7 @@ void render_loop(GLFWwindow *window) {
         lightingShader.setVec3("objectColor", glm::vec3(1.0f, 0.5f, 0.31f));
         lightingShader.setVec3("lightColor", glm::vec3(1.0f, 1.0f, 1.0f));
         lightingShader.setVec3("lightPos", glm::vec3(1.2f, 1.0f, 2.0f));
+        lightingShader.setVec3("viewPos", camera.Position);
 
         //view/projection transformations
         glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), 800.0f / 600.0f, 0.1f, 100.0f);
