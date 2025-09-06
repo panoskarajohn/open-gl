@@ -45,49 +45,44 @@ void render_loop(GLFWwindow *window) {
   lastFrame = currentFrame;
   Shader lightingShader("../Shaders/diffuse/diffuse_map_vs.glsl",
                         "../Shaders/diffuse/diffuse_map_fs.glsl");
-  lightingShader.setInt("material.diffuse", 0);
   Shader lightCubeShader("../Shaders/diffuse/diffuse_cube_vs.glsl",
                          "../Shaders/diffuse/diffuse_cube_fs.glsl");
 
-  // configure the cube's VAO (and VBO)
-  uint VBO, cubeVAO;
+  // first, configure the cube's VAO (and VBO)
+  unsigned int VBO, cubeVAO;
   glGenVertexArrays(1, &cubeVAO);
   glGenBuffers(1, &VBO);
 
   glBindBuffer(GL_ARRAY_BUFFER, VBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(cube_light), cube_light, GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
   glBindVertexArray(cubeVAO);
-
-  // Position
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *) 0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
   glEnableVertexAttribArray(0);
-
-  // Normal
-  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *) (3 * sizeof(float)));
+  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
   glEnableVertexAttribArray(1);
-
-  // Texture coordinates
-  glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *) (6 * sizeof(float)));
+  glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
   glEnableVertexAttribArray(2);
 
-  // second, configure the light's VAO (VBO stays the same; the vertices are
-
-  uint lightCubeVAO;
+  // second, configure the light's VAO (VBO stays the same; the vertices are the same for the light object which is also a 3D cube)
+  unsigned int lightCubeVAO;
   glGenVertexArrays(1, &lightCubeVAO);
   glBindVertexArray(lightCubeVAO);
 
   glBindBuffer(GL_ARRAY_BUFFER, VBO);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *) 0);
+  // note that we update the lamp's position attribute's stride to reflect the updated buffer data
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
   glEnableVertexAttribArray(0);
 
+
   uint diffuseMap = loadTexture("../Images/container2.png", false);
-  //uint specularMap = loadTexture("../Images/container2_specular.png", false);
-  uint specularMap = loadTexture("../Images/lighting_maps_specular_color.png", false);
+  uint specularMap = loadTexture("../Images/container2_specular.png", false);
+  uint emissionMap = loadTexture("../Images/matrix.jpg", false);
 
   lightingShader.use();
   lightingShader.setInt("material.diffuse", 0);
   lightingShader.setInt("material.specular", 1);
+  lightingShader.setInt("material.emission", 2);
 
   while (!glfwWindowShouldClose(window)) {
     float currentFrame = static_cast<float>(glfwGetTime());
@@ -99,16 +94,19 @@ void render_loop(GLFWwindow *window) {
     lightingShader.setVec3("viewPos", camera.Position);
 
     // rendering commands here
-    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     lightingShader.use();
+    lightingShader.setVec3("light.position", lightPos);
+    lightingShader.setVec3("viewPos", camera.Position);
+
+    // light properties
     lightingShader.setVec3("light.ambient", glm::vec3(0.2f, 0.2f, 0.2f));
     lightingShader.setVec3("light.diffuse", glm::vec3(0.5f, 0.5f, 0.5f));
-    lightingShader.setVec3("light.specular", glm::vec3(1.0f, 1.0f, 1.0f));
+    lightingShader.setVec3("light.specular",glm::vec3( 1.0f, 1.0f, 1.0f));
 
     //material properties
-    lightingShader.setVec3("material.specular", glm::vec3(0.5f, 0.5f, 0.5f));
     lightingShader.setFloat("material.shininess", 64.0f);
 
     //
@@ -128,13 +126,15 @@ void render_loop(GLFWwindow *window) {
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, specularMap);
 
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, emissionMap);
+
     glBindVertexArray(cubeVAO);
     glDrawArrays(GL_TRIANGLES, 0, 36);
 
     lightCubeShader.use();
     lightCubeShader.setMat4("projection", projection);
     lightCubeShader.setMat4("view", view);
-
     model = glm::mat4(1.0f);
     model = glm::translate(model, lightPos);
     model = glm::scale(model, glm::vec3(0.2f)); // a smaller cube
@@ -244,33 +244,39 @@ void scroll_callback(GLFWwindow *window, double xoffset, double yoffset) {
 }
 
 unsigned int loadTexture(char const *path, bool invert = false) {
-  unsigned int texture;
-  glGenTextures(1, &texture);
-  glBindTexture(GL_TEXTURE_2D, texture);
-  // set the texture wrapping/filtering options (on the currently bound texture
-  // object)
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // horizontal
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT); // vertical
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-                  GL_LINEAR_MIPMAP_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-                  GL_LINEAR); // we cannot mip map on mag
-  // load and generate the texture
-  int width, height, nrChannels;
-  if (invert == false) {
-    stbi_set_flip_vertically_on_load(true);
-  }
-  unsigned char *data = stbi_load(path, &width, &height, &nrChannels, 0);
-  if (data) {
-    GLenum format = (nrChannels == 4) ? GL_RGBA : GL_RGB;
-    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format,
-                 GL_UNSIGNED_BYTE, data);
+  uint textureID;
+  glGenTextures(1, &textureID);
+
+  int width, height, nrComponents;
+  unsigned char *data = stbi_load(path, &width, &height, &nrComponents, 0);
+  if (data)
+  {
+    GLenum format;
+    if (nrComponents == 1)
+      format = GL_RED;
+    else if (nrComponents == 3)
+      format = GL_RGB;
+    else if (nrComponents == 4)
+      format = GL_RGBA;
+
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
     glGenerateMipmap(GL_TEXTURE_2D);
-  } else {
-    std::cout << "Failed to load texture" << std::endl;
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    stbi_image_free(data);
   }
-  stbi_image_free(data);
-  return texture;
+  else
+  {
+    std::cout << "Texture failed to load at path: " << path << std::endl;
+    stbi_image_free(data);
+  }
+
+  return textureID;
 }
 
 void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
