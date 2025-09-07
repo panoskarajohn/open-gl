@@ -91,6 +91,7 @@ void render_loop(GLFWwindow *window) {
     lightingShader.setVec3("light.position", camera.Position);
     lightingShader.setVec3("light.direction", camera.Front);
     lightingShader.setFloat("light.cutOff", glm::cos(glm::radians(12.5f)));
+    lightingShader.setFloat("light.outerCutOff", glm::cos(glm::radians(17.5f)));
     lightingShader.setVec3("viewPos", camera.Position);
 
     // rendering commands here
