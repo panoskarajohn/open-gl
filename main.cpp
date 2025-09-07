@@ -88,7 +88,9 @@ void render_loop(GLFWwindow *window) {
     lastFrame = currentFrame;
 
     processInput(window);
-    lightingShader.setVec3("light.position", lightPos);
+    lightingShader.setVec3("light.position", camera.Position);
+    lightingShader.setVec3("light.direction", camera.Front);
+    lightingShader.setFloat("light.cutOff", glm::cos(glm::radians(12.5f)));
     lightingShader.setVec3("viewPos", camera.Position);
 
     // rendering commands here
@@ -141,16 +143,16 @@ void render_loop(GLFWwindow *window) {
     }
 
     // also draw the lamp object
-    lightCubeShader.use();
-    lightCubeShader.setMat4("projection", projection);
-    lightCubeShader.setMat4("view", view);
-    model = glm::mat4(1.0f);
-    model = glm::translate(model, lightPos);
-    model = glm::scale(model, glm::vec3(0.2f)); // a smaller cube
-    lightCubeShader.setMat4("model", model);
-
-    glBindVertexArray(lightCubeVAO);
-    glDrawArrays(GL_TRIANGLES, 0, 36);
+    // lightCubeShader.use();
+    // lightCubeShader.setMat4("projection", projection);
+    // lightCubeShader.setMat4("view", view);
+    // model = glm::mat4(1.0f);
+    // model = glm::translate(model, lightPos);
+    // model = glm::scale(model, glm::vec3(0.2f)); // a smaller cube
+    // lightCubeShader.setMat4("model", model);
+    //
+    // glBindVertexArray(lightCubeVAO);
+    // glDrawArrays(GL_TRIANGLES, 0, 36);
 
     glfwSwapBuffers(window);
     glfwPollEvents();
