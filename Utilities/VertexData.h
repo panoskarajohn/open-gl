@@ -68,5 +68,11 @@ glm::vec3 pointLightPositions[] = {
  glm::vec3(-4.0f,  2.0f, -12.0f),
  glm::vec3( 0.0f,  0.0f, -3.0f)
 };
+glm::vec3 pointLightColors[] = {
+ glm::vec3(0.1f, 0.1f, 0.1f),
+ glm::vec3(0.1f, 0.1f, 0.1f),
+ glm::vec3(0.1f, 0.1f, 0.1f),
+ glm::vec3(0.3f, 0.1f, 0.1f)
+};
 
 #endif //VERTEXDATA_H
