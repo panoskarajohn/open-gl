@@ -77,12 +77,10 @@ void render_loop(GLFWwindow *window) {
 
   uint diffuseMap = loadTexture("../Images/container2.png", false);
   uint specularMap = loadTexture("../Images/container2_specular.png", false);
-  uint emissionMap = loadTexture("../Images/matrix.jpg", false);
 
   lightingShader.use();
   lightingShader.setInt("material.diffuse", 0);
   lightingShader.setInt("material.specular", 1);
-  lightingShader.setInt("material.emission", 2);
 
   while (!glfwWindowShouldClose(window)) {
     float currentFrame = static_cast<float>(glfwGetTime());
@@ -98,7 +96,7 @@ void render_loop(GLFWwindow *window) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     lightingShader.use();
-    lightingShader.setVec3("light.position", lightPos);
+    lightingShader.setVec3("light.direction", glm::vec3(-0.2f, -1.0f, -0.3f));
     lightingShader.setVec3("viewPos", camera.Position);
 
     // light properties
@@ -126,22 +124,19 @@ void render_loop(GLFWwindow *window) {
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, specularMap);
 
-    glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, emissionMap);
 
     glBindVertexArray(cubeVAO);
-    glDrawArrays(GL_TRIANGLES, 0, 36);
+    for (unsigned int i = 0; i < 10; i++)
+    {
+      // calculate the model matrix for each object and pass it to shader before drawing
+      glm::mat4 model = glm::mat4(1.0f);
+      model = glm::translate(model, cubePositions[i]);
+      float angle = 20.0f * i;
+      model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+      lightingShader.setMat4("model", model);
 
-    lightCubeShader.use();
-    lightCubeShader.setMat4("projection", projection);
-    lightCubeShader.setMat4("view", view);
-    model = glm::mat4(1.0f);
-    model = glm::translate(model, lightPos);
-    model = glm::scale(model, glm::vec3(0.2f)); // a smaller cube
-    lightCubeShader.setMat4("model", model);
-
-    glBindVertexArray(lightCubeVAO);
-    glDrawArrays(GL_TRIANGLES, 0, 36);
+      glDrawArrays(GL_TRIANGLES, 0, 36);
+    }
 
     glfwSwapBuffers(window);
     glfwPollEvents();
